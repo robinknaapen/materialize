@@ -206,7 +206,8 @@
       if (
         this.options.closeOnClick &&
         $target.closest('.dropdown-content').length &&
-        !this.isTouchMoving
+        !this.isTouchMoving &&
+        !e.target.classList.contains('select_search')
       ) {
         // isTouchMoving to check if scrolling on mobile.
         setTimeout(() => {
@@ -259,6 +260,9 @@
      * @param {Event} e
      */
     _handleDropdownKeydown(e) {
+      if(e.target.classList.contains('select_search')){
+        return
+      }
       if (e.which === M.keys.TAB) {
         e.preventDefault();
         this.close();

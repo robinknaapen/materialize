@@ -1,5 +1,5 @@
 /*!
- * Materialize v1.0.0-rc.1 (http://materializecss.com)
+ * Materialize vundefined (http://materializecss.com)
  * Copyright 2014-2017 Materialize
  * MIT License (https://raw.githubusercontent.com/Dogfalo/materialize/master/LICENSE)
  */
@@ -2412,7 +2412,7 @@ $jscomp.polyfill = function (e, r, p, m) {
         var _this9 = this;
 
         var $target = $(e.target);
-        if (this.options.closeOnClick && $target.closest('.dropdown-content').length && !this.isTouchMoving) {
+        if (this.options.closeOnClick && $target.closest('.dropdown-content').length && !this.isTouchMoving && !e.target.classList.contains('select_search')) {
           // isTouchMoving to check if scrolling on mobile.
           setTimeout(function () {
             _this9.close();
@@ -2471,6 +2471,9 @@ $jscomp.polyfill = function (e, r, p, m) {
     }, {
       key: "_handleDropdownKeydown",
       value: function _handleDropdownKeydown(e) {
+        if (e.target.classList.contains('select_search')) {
+          return;
+        }
         if (e.which === M.keys.TAB) {
           e.preventDefault();
           this.close();
@@ -2593,7 +2596,8 @@ $jscomp.polyfill = function (e, r, p, m) {
         };
 
         // Countainer here will be closest ancestor with overflow: hidden
-        var closestOverflowParent = this.dropdownEl.offsetParent;
+        var closestOverflowParent = !!this.dropdownEl.offsetParent ? this.dropdownEl.offsetParent : this.dropdownEl.parentNode;
+
         var alignments = M.checkPossibleAlignments(this.el, closestOverflowParent, dropdownBounds, this.options.coverTrigger ? 0 : triggerBRect.height);
 
         var verticalAlignment = 'top';
@@ -3993,15 +3997,18 @@ $jscomp.polyfill = function (e, r, p, m) {
       // Setup
       _this21.$tabLinks = _this21.$el.children('li.tab').children('a');
       _this21.index = 0;
-      _this21._setTabsAndTabWidth();
       _this21._setupActiveTabLink();
-      _this21._createIndicator();
 
+      // Setup tabs content
       if (_this21.options.swipeable) {
         _this21._setupSwipeableTabs();
       } else {
         _this21._setupNormalTabs();
       }
+
+      // Setup tabs indicator after content to ensure accurate widths
+      _this21._setTabsAndTabWidth();
+      _this21._createIndicator();
 
       _this21._setupEventHandlers();
       return _this21;
@@ -4095,8 +4102,6 @@ $jscomp.polyfill = function (e, r, p, m) {
           return;
         }
 
-        this._setTabsAndTabWidth();
-
         // Make the old tab inactive.
         this.$activeTabLink.removeClass('active');
         var $oldContent = this.$content;
@@ -4134,6 +4139,9 @@ $jscomp.polyfill = function (e, r, p, m) {
             }
           }
         }
+
+        // Update widths after content is swapped (scrollbar bugfix)
+        this._setTabsAndTabWidth();
 
         // Update indicator
         this._animateIndicator(prevIndex);
@@ -4506,15 +4514,16 @@ $jscomp.polyfill = function (e, r, p, m) {
       }
     }, {
       key: "open",
-      value: function open() {
+      value: function open(isManual) {
         if (this.isOpen) {
           return;
         }
+        isManual = isManual === undefined ? true : undefined; // Default value true
         this.isOpen = true;
         // Update tooltip content with HTML attribute options
         this.options = $.extend({}, this.options, this._getAttributeOptions());
         this._updateTooltipContent();
-        this._setEnterDelayTimeout();
+        this._setEnterDelayTimeout(isManual);
       }
     }, {
       key: "close",
@@ -4555,13 +4564,13 @@ $jscomp.polyfill = function (e, r, p, m) {
 
     }, {
       key: "_setEnterDelayTimeout",
-      value: function _setEnterDelayTimeout() {
+      value: function _setEnterDelayTimeout(isManual) {
         var _this27 = this;
 
         clearTimeout(this._enterDelayTimeout);
 
         this._enterDelayTimeout = setTimeout(function () {
-          if (!_this27.isHovered && !_this27.isFocused) {
+          if (!_this27.isHovered && !_this27.isFocused && !isManual) {
             return;
           }
 
@@ -4679,7 +4688,7 @@ $jscomp.polyfill = function (e, r, p, m) {
       value: function _handleMouseEnter() {
         this.isHovered = true;
         this.isFocused = false; // Allows close of tooltip when opened by focus.
-        this.open();
+        this.open(false);
       }
     }, {
       key: "_handleMouseLeave",
@@ -4693,7 +4702,7 @@ $jscomp.polyfill = function (e, r, p, m) {
       value: function _handleFocus() {
         if (M.tabPressed) {
           this.isFocused = true;
-          this.open();
+          this.open(false);
         }
       }
     }, {
@@ -5525,6 +5534,7 @@ $jscomp.polyfill = function (e, r, p, m) {
        */
       value: function destroy() {
         this._removeEventHandlers();
+        this._enableBodyScrolling();
         this._overlay.parentNode.removeChild(this._overlay);
         this.dragTarget.parentNode.removeChild(this.dragTarget);
         this.el.M_Sidenav = undefined;
@@ -6594,7 +6604,7 @@ $jscomp.polyfill = function (e, r, p, m) {
 
         // Check if the input isn't empty
         // Check if focus triggered by tab
-        if (this.oldVal !== val && M.tabPressed) {
+        if (this.oldVal !== val && (M.tabPressed || e.type !== 'focus')) {
           this.open();
         }
 
@@ -7053,8 +7063,7 @@ $jscomp.polyfill = function (e, r, p, m) {
           formReset.find('select').each(function () {
             // check if initialized
             if (this.M_FormSelect) {
-              var reset_text = $(this).find('option[selected]').text();
-              $(this).siblings('input.select-dropdown')[0].value = reset_text;
+              $(this).trigger('change');
             }
           });
         }, 0);
